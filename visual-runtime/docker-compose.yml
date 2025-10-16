@@ -1,0 +1,45 @@
+version: "3.9"
+
+services:
+  visual-runtime:
+    build: .
+    image: openhands/visual-runtime:latest
+    container_name: openhands-visual-runtime
+    environment:
+      - RESOLUTION=1600x900
+      - DISPLAY=:1
+      - VNC_PORT=5901
+    ports:
+      - "7900:7900"   # noVNC at http://localhost:7900/vnc.html
+    security_opt:
+      - no-new-privileges:true
+    shm_size: "1gb"
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4g
+        reservations:
+          cpus: '1.0'
+          memory: 2g
+    volumes:
+      - ./sessions:/home/runner/sessions
+      - ./logs:/home/runner/logs
+    restart: unless-stopped
+    
+  visual-control-plane:
+    build: ../
+    image: openhands/control-plane:latest
+    container_name: openhands-control-plane
+    ports:
+      - "3000:3000"
+    environment:
+      - VISUAL_RUNTIME_ENABLED=true
+      - VISUAL_RUNTIME_HOST=visual-runtime
+      - VISUAL_RUNTIME_PORT=7900
+    depends_on:
+      - visual-runtime
+    volumes:
+      - ./sessions:/app/sessions
+      - ./logs:/app/logs
+    restart: unless-stopped
